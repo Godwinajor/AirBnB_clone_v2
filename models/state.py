@@ -1,35 +1,28 @@
 #!/usr/bin/python3
-""" holds class State"""
-import models
+"""This is the state class"""
 from models.base_model import BaseModel, Base
-from os import getenv
-import sqlalchemy
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
+from models.city import City
 
 
 class State(BaseModel, Base):
-    """Representation of state """
-    if getenv('HBNB_TYPE_STORAGE') == 'db':
-        __tablename__ = 'states'
-        name = Column(String(128),
-                      nullable=False)
-        cities = relationship("City", cascade="all, delete",
-                              backref="states")
-    else:
-        name = ""
+    """This is the class for State
+    Attributes:
+        name: input name
+    """
+    __tablename__ = "states"
+    name = Column(String(128), nullable=False)
+    cities = relationship("City", cascade="all,delete", backref="state")
 
-    def __init__(self, *args, **kwargs):
-        """initializes state"""
-        super().__init__(*args, **kwargs)
-
-    if getenv('HBNB_TYPE_STORAGE') != 'db':
-        @property
-        def cities(self):
-            """fs getter attribute that returns City instances"""
-            values_city = models.storage.all("City").values()
-            list_city = []
-            for city in values_city:
-                if city.state_id == self.id:
-                    list_city.append(city)
-            return list_city
+    @property
+    def cities(self):
+        """  getter attribute cities that returns the list of
+        City instances with state_id equals to the current State.id """
+        from models import storage
+        allcities = storage.all(City)
+        c = []
+        for k, v in allcities.items():
+            if v.state_id == self.id:
+                c.append(v)
+        return c

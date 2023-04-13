@@ -1,56 +1,57 @@
 #!/usr/bin/python3
-"""Compress web static package
 """
+a Fabric script that generates a .tgz archive
+from the contents of the web_static folder of the AirBnB Clone repo
+"""
+from fabric.operations import local, put, run
+from datetime import datetime as d
 from fabric.api import *
-from datetime import datetime
-from os import path
+
+env.hosts = ['34.74.120.150', '54.173.196.75']
 
 
-env.hosts = ['100.25.19.204', '54.157.159.85']
-env.user = 'ubuntu'
-env.key_filename = '~/.ssh/id_rsa'
+def do_pack():
+    """ generates a .tgz archive """
+    name = "versions/web_static_" + str(d.now().year)
+    name += str(d.now().month) + str(d.now().day) + str(d.now().hour)
+    name += str(d.now().minute) + str(d.now().second) + ".tgz"
+    result = local("mkdir -p versions; tar -cvzf \"%s\" web_static" % name)
+    if result.failed:
+        return NULL
+    else:
+        return name
 
 
 def do_deploy(archive_path):
-        """Deploy web files to server
-        """
-        try:
-                if not (path.exists(archive_path)):
-                        return False
-
-                # upload archive
-                put(archive_path, '/tmp/')
-
-                # create target dir
-                timestamp = archive_path[-18:-4]
-                run('sudo mkdir -p /data/web_static/\
-releases/web_static_{}/'.format(timestamp))
-
-                # uncompress archive and delete .tgz
-                run('sudo tar -xzf /tmp/web_static_{}.tgz -C \
-/data/web_static/releases/web_static_{}/'
-                    .format(timestamp, timestamp))
-
-                # remove archive
-                run('sudo rm /tmp/web_static_{}.tgz'.format(timestamp))
-
-                # move contents into host web_static
-                run('sudo mv /data/web_static/releases/web_static_{}/web_static/* \
-/data/web_static/releases/web_static_{}/'.format(timestamp, timestamp))
-
-                # remove extraneous web_static dir
-                run('sudo rm -rf /data/web_static/releases/\
-web_static_{}/web_static'
-                    .format(timestamp))
-
-                # delete pre-existing sym link
-                run('sudo rm -rf /data/web_static/current')
-
-                # re-establish symbolic link
-                run('sudo ln -s /data/web_static/releases/\
-web_static_{}/ /data/web_static/current'.format(timestamp))
-        except:
-                return False
-
-        # return True on success
-        return True
+    """ uploads the archive to servers """
+    destination = "/tmp/" + archive_path.split("/")[-1]
+    result = put(archive_path, "/tmp/")
+    if result.failed:
+        return False
+    filename = archive_path.split("/")[-1]
+    f = filename.split(".")[0]
+    directory = "/data/web_static/releases/" + f
+    run_res = run("mkdir -p \"%s\"" % directory)
+    if run_res.failed:
+        return False
+    run_res = run("tar -xzf %s -C %s" % (destination, directory))
+    if run_res.failed:
+        return False
+    run_res = run("rm %s" % destination)
+    if run_res:
+        return False
+    web = directory + "/web_static/*"
+    run_res = run("mv %s %s" % (web, directory))
+    if run_res.failed:
+        return False
+    web = web[0:-2]
+    run_res = run("rm -rf %s" % web)
+    if run_res.failed:
+        return False
+    run_res = run("rm -rf /data/web_static/current")
+    if run_res.failed:
+        return False
+    run_res = run("ln -s %s /data/web_static/current" % directory)
+    if run_res.failed:
+        return False
+    return True

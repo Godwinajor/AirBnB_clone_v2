@@ -1,19 +1,19 @@
 #!/usr/bin/python3
-from fabric.api import local
-from time import strftime
-from datetime import date
+"""
+a Fabric script that generates a .tgz archive
+from the contents of the web_static folder of the AirBnB Clone repo
+"""
+from fabric.operations import local
+from datetime import datetime as d
 
 
 def do_pack():
-    """ A script that generates archive the contents of web_static folder"""
-
-    filename = strftime("%Y%m%d%H%M%S")
-    try:
-        local("mkdir -p versions")
-        local("tar -czvf versions/web_static_{}.tgz web_static/"
-              .format(filename))
-
-        return "versions/web_static_{}.tgz".format(filename)
-
-    except Exception as e:
+    """ generates a .tgz archive """
+    name = "versions/web_static_" + str(d.now().year)
+    name += str(d.now().month) + str(d.now().day) + str(d.now().hour)
+    name += str(d.now().minute) + str(d.now().second) + ".tgz"
+    result = local("mkdir -p versions; tar -cvzf \"%s\" web_static" % name)
+    if result.failed:
         return None
+    else:
+        return name
